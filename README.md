@@ -1,6 +1,6 @@
 # intern
 
-A Python module that helps prevent duplicate allocations of identical immutable objects
+A Python module that helps prevent duplicate allocations of identical immutable objects.
 
 ## Overview
 
@@ -8,7 +8,7 @@ I originally wrote this module to help with a graphics library I was working on 
 
 The `Intern` metaclass registers objects in a global dictionary and eliminates duplicates by returning a reference to an existing object rather than a new one where possible. The dictionary stores weak references to these objects so that they should still deallocate normally when the object is no longer in use. (The dictionary entry itself also gets removed via a custom `__del__()` method applied to your class.)
 
-## Example
+## Example (Python 3)
 
 	>>> from intern import Intern
 	>>> class Color(metaclass=Intern):
