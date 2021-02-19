@@ -26,9 +26,9 @@ The `Intern` metaclass registers objects in a global dictionary and eliminates d
 	>>> color1 is color2
 	True
 
-Here, we have written a `Color` class and instantiated it twice with the same (red) color. Note the last query reads `color1 is color2`. `color1 == color2` would be true regardless of whether the class interns, but `color1 is color2` means both variables are references to the same single object.
+Here, we have written a `Color` class and instantiated it twice with the same (red) color. Note the last query reads `color1 is color2`. `color1 == color2` would be true regardless of whether the class interns, but `color1 is color2` means both variables are referencing the same single object.
 
-Note that interning should only ever be done on an immutable class! If you started changing `color1`'s attributes after the fact, the internment logic will break down.
+Note that interning should only ever be done on an immutable class! If you started changing `color1`'s attributes after the fact, the internment logic would break down.
 
 You could use property decorators to ensure the attributes are read-only.
 
