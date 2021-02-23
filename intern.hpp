@@ -10,8 +10,6 @@
 #include <unordered_map>
 #include <utility>
 
-#include <iostream>
-
 namespace intern {
 
 	enum class kMapType { Unordered, Ordered };
