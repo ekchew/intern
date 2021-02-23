@@ -20,14 +20,14 @@ namespace intern {
 			struct Map {
 				using Type = std::unordered_map<
 					const T&,
-					std::shared_ptr<const Interned<T,kMapType::Unordered>>
+					std::weak_ptr<const Interned<T,kMapType::Unordered>>
 					>;
 			};
 		template<typename T>
 			struct Map<T,kMapType::Ordered> {
 				using Type = std::map<
 					const T&,
-					std::shared_ptr<const Interned<T,kMapType::Ordered>>
+					std::weak_ptr<const Interned<T,kMapType::Ordered>>
 					>;
 			};
 		template<typename T, kMapType MT>
