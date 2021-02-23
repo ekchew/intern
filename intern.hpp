@@ -15,24 +15,24 @@ namespace intern {
 	enum class kMapType { Unordered, Ordered };
 
 	namespace details {
-		template<typename T, kMapType MT> struct Interned;
-		template<typename T, kMapType MT>
+		template<typename Cls, kMapType MT> struct Interned;
+		template<typename Cls, kMapType MT>
 			struct Map {
 				using Type = std::unordered_map<
-					const T&,
-					std::weak_ptr<const Interned<T,kMapType::Unordered>>
+					const Cls&,
+					std::weak_ptr<const Interned<Cls,kMapType::Unordered>>
 					>;
 			};
-		template<typename T>
-			struct Map<T,kMapType::Ordered> {
+		template<typename Cls>
+			struct Map<Cls,kMapType::Ordered> {
 				using Type = std::map<
-					const T&,
-					std::weak_ptr<const Interned<T,kMapType::Ordered>>
+					const Cls&,
+					std::weak_ptr<const Interned<Cls,kMapType::Ordered>>
 					>;
 			};
-		template<typename T, kMapType MT>
-			using TMap = typename Map<T,MT>::Type;
-		template<typename T, kMapType MT>
+		template<typename Cls, kMapType MT>
+			using TMap = typename Map<Cls,MT>::Type;
+		template<typename Cls, kMapType MT>
 			struct Interned {
 				using TMutex = std::mutex;
 				template<typename... Args> static
@@ -41,7 +41,7 @@ namespace intern {
 					{
 						using std::move;
 						std::shared_ptr<const Interned> p;
-						T v{std::forward<Args>(args)...};
+						Cls v{std::forward<Args>(args)...};
 						std::lock_guard<TMutex> lg{gInternMapMutex};
 						auto it = gInternMap.find(v);
 						if(it == gInternMap.end()) {
@@ -53,22 +53,22 @@ namespace intern {
 						}
 						return move(p);
 					}
-				using T::T;
+				using Cls::Cls;
 				~Interned() {
 					std::lock_guard<TMutex> lg{gInternMapMutex};
 					gInternMap.erase(*this);
 				}
 			private:
-				inline static TMap<T,MT> gInternMap;
+				inline static TMap<Cls,MT> gInternMap;
 				inline static TMutex gInternMapMutex;
 			};
 	}
 
-	template<typename T, kMapType MT = kMapType::Unordered, typename... Args>
+	template<typename Cls, kMapType MT = kMapType::Unordered, typename... Args>
 		auto MakeInterned(Args&&... args)
-			-> std::shared_ptr<const details::Interned<T,MT>>
+			-> std::shared_ptr<const details::Interned<Cls,MT>>
 		{
-			return details::Interned<T,MT>::MakeInterned(
+			return details::Interned<Cls,MT>::MakeInterned(
 				std::forward<Args>(args)...
 				);
 		}
