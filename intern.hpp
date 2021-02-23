@@ -33,7 +33,7 @@ namespace intern {
 		template<typename Cls, kMapType MT>
 			using TMap = typename Map<Cls,MT>::Type;
 		template<typename Cls, kMapType MT>
-			struct Interned {
+			struct Interned: Cls {
 				using TMutex = std::mutex;
 				template<typename... Args> static
 					auto MakeInterned(Args&&... args)
