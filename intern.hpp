@@ -49,7 +49,7 @@ namespace intern {
 							gInternMap.insert(it, std::make_pair(*p, p));
 						}
 						else {
-							p = it->second;
+							p = it->second.lock();
 						}
 						return move(p);
 					}
