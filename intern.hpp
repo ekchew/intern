@@ -10,6 +10,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include <iostream>
+
 namespace intern {
 
 	enum class kMapType { Unordered, Ordered };
@@ -19,14 +21,14 @@ namespace intern {
 		template<typename Cls, kMapType MT>
 			struct Map {
 				using Type = std::unordered_map<
-					const Cls&,
+					const Interned<Cls,kMapType::Unordered>*,
 					std::weak_ptr<const Interned<Cls,kMapType::Unordered>>
 					>;
 			};
 		template<typename Cls>
 			struct Map<Cls,kMapType::Ordered> {
 				using Type = std::map<
-					const Cls&,
+					const Interned<Cls,kMapType::Ordered>*,
 					std::weak_ptr<const Interned<Cls,kMapType::Ordered>>
 					>;
 			};
@@ -41,12 +43,12 @@ namespace intern {
 					{
 						using std::move;
 						std::shared_ptr<const Interned> p;
-						Cls v{std::forward<Args>(args)...};
+						Interned v{std::forward<Args>(args)...};
 						std::lock_guard<TMutex> lg{gInternMapMutex};
-						auto it = gInternMap.find(v);
+						auto it = gInternMap.find(&v);
 						if(it == gInternMap.end()) {
 							p = std::make_shared<const Interned>(move(v));
-							gInternMap.insert(it, std::make_pair(*p, p));
+							gInternMap.insert(it, std::make_pair(p.get(), p));
 						}
 						else {
 							p = it->second.lock();
@@ -55,13 +57,29 @@ namespace intern {
 					}
 				using Cls::Cls;
 				~Interned() {
-					std::lock_guard<TMutex> lg{gInternMapMutex};
-					gInternMap.erase(*this);
-				}
+						std::lock_guard<TMutex> lg{gInternMapMutex};
+						gInternMap.erase(this);
+					}
 			private:
 				inline static TMap<Cls,MT> gInternMap;
 				inline static TMutex gInternMapMutex;
 			};
+			template<typename Cls, kMapType MT>
+				auto operator == (
+					const Interned<Cls,MT>* pA,
+					const Interned<Cls,MT>* pB
+					)
+				{
+					return *pA == *pB;
+				}
+			template<typename Cls, kMapType MT>
+				auto operator < (
+					const Interned<Cls,MT>* pA,
+					const Interned<Cls,MT>* pB
+					)
+				{
+					return *pA < *pB;
+				}
 	}
 
 	template<typename Cls, kMapType MT = kMapType::Unordered, typename... Args>
@@ -89,6 +107,17 @@ namespace intern {
 		auto HashTuple(const Tuple& tuple) {
 			return std::apply(Hash, tuple);
 		}
+}
+namespace std {
+	template<typename Cls, intern::kMapType MT>
+		struct hash<const intern::details::Interned<Cls,MT>*> {
+			auto operator()(
+				const intern::details::Interned<Cls,MT>* pInterned)
+					const noexcept -> std::size_t
+				{
+					return hash<Cls>{}(*pInterned);
+				}
+		};
 }
 
 #endif
