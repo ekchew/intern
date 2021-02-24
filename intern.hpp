@@ -60,7 +60,7 @@ namespace intern {
 	namespace details {
 
 		//	The Map class specifies an appropriate unordered_map type depending
-		//	on whether or Tuple is supplied. In either case, the T type serves
+		//	on whether Tuple is supplied. In either case, the T type serves
 		//	as the key and a weak pointer to const T serves as the value. The
 		//	idea is that the pointer points to the key, which is safe with
 		//	unordered_map because keys never get shuffled around in memory.
