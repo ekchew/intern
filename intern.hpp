@@ -149,34 +149,29 @@ namespace intern {
 			//	Instantiate a temporary local T variable with the input args.
 			T key{std::forward<Args>(args)...};
 
-			//	The variable serves as a key we can look up in the global map.
+			//	Attempt to place the variable as a key in the global map.
 			std::lock_guard<details::TMutex> lg{D::gMutex};
-			auto it = D::gMap.find(key);
-
-			if(it == D::gMap.end()) {
-
-				//	Since the key was not found, we need to add it to the map.
-				auto [it, done] = D::gMap.try_emplace(std::move(key));
+			if(auto [it, done] = D::gMap.try_emplace(std::move(key)); done) {
+				
+				//	Succeeding means we have yet to encounter the object.
+				//	The key should now be in place, but the weak pointer would
+				//	still be null. We need to create a shared pointer that
+				//	points to where the key is now in the map and assign that
+				//	pointer to the weak pointer value. This shared pointer will
+				//	use a custom deleter which, rather than deallocating it in
+				//	the traditional way, will remove the entry from the map.
+				
 			 #if INTERN_DEBUG
-			 	if(!done) {
-					//	This is, of course, impossible. ~Douglas Adams
-					throw std::logic_error{
-						"MakeInterned failed to emplace new object"
-						};
-				}
 				std::cout << "intern\n";
 			 #endif
-
-				//	At this point, the associated weak pointer is still null.
-				//	Make a shared pointer that points to the key and has a
-				//	custom deleter (which eventually removes it from the map).
-				//	Then assign the new shared pointer to the weak pointer.
 				shPtr = decltype(shPtr)(&it->first, D{});
 				it->second = shPtr;
 			}
 			else {
-				//	Since the key was found, we can generate another shared
-				//	pointer out of the associated weak pointer.
+				//	Failing means an identical key is already in the map.
+				//	This is a good thing! We can make a shared pointer out
+				//	of the weak pointer and return that without any further
+				//	allocations.
 			 #if INTERN_DEBUG
 				std::cout << "fetch interned\n";
 			 #endif
