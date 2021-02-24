@@ -14,15 +14,13 @@ namespace intern {
 	//---- Hash Utilities ------------------------------------------------------
 	//
 	//	Hash(args...) -> std::size_t:
-	//		This function uses std::hash to calculate a hash value for each
-	//		arg you pass it. It requires at least one arg. If there are multiple
-	//		args, it combines the hash values into one before returning it.
+	//		This function hashes one or more args. std::hash is used to
+	//		calculate a hash value on each arg. If there are multiple args,
+	//		the hash values are combined into one.
 	//
 	//	HashTuple(arg) -> std::size_t:
-	//		This function unpacks a tuple and calls Hash() on its elements.
-	//		The "tuple" can really be anything tuple-like. In other words, arg
-	//		can be a std::pair or a std::array -- not just a std::tuple.
-	//
+	//		This function calls Hash() on its elements of a tuple-like arg
+	//		(e.g. std::tuple, std::pair, std::array).
 
 	template<typename T, typename... Ts>
 		constexpr auto Hash(const T& v, const Ts&... vs) -> std::size_t {
@@ -30,30 +28,23 @@ namespace intern {
 				return std::hash<T>{}(v);
 			}
 			else {
-				//	The algorithm used to combine hashes is based on the boost
-				//	algorithm. The 32-bit "magic" number has, however, been
-				//	extended to 64 bits where appropriate. Also note that the
-				//	combining is applied in reverse order since it was easier
-				//	to do so in a recursive function; not that it matters.
+				//	The hash-combining algorithm was "boosted" from boost with
+				//	one modification to extend the "magic" number to 64 bits
+				//	where appropriate. (Also, the hashes are combined in the
+				//	reverse order of the args for recursion's sake, not that
+				//	it matters.)
 				constexpr std::size_t kMagic =
 					sizeof(std::size_t) * CHAR_BIT > 32u ?
 					0x9e3779b97f4a7c15 : 0x9e3779b9;
-				auto h = Hash(vs...);
-				return h ^ (Hash(v) + kMagic + (h << 6) + (h >> 2));
+				auto seed = Hash(vs...);
+				return seed ^ (Hash(v) + kMagic + (seed << 6) + (seed >> 2));
 			}
 		}
-
-	namespace details {
-		struct TupleHash {
-			std::size_t mHash;
-			template<typename... Args>
-				constexpr TupleHash(const Args&... args):
-					mHash{Hash(args...)} {}
-		};
-	}
 	template<typename Tuple>
 		constexpr auto HashTuple(const Tuple& tuple) {
-			return std::make_from_tuple<details::TupleHash>(tuple).mHash;
+			return std::apply(
+				[](const auto&... args) { return Hash(args...); }, tuple
+				);
 		}
 
 	//---- Internment ----------------------------------------------------------
