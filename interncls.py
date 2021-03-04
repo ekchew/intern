@@ -1,111 +1,53 @@
-def InternCls(baseCls, *args, **kwargs):
-	class Subcls(baseCls):
-		def __new__(cls, *args, **kwargs):
-			return super().__new__(cls)
-		def __init__(self, *args, **kwargs):
-			super().__init__(*args, **kwargs)
-	return Subcls
+from __future__ import annotations
 
-@InternCls
-class Foo:
-	def __init__(self, i):
-		self.i = i
-	def __repr__(self):
-		return f"{type(self).__name__}(i = {self.i})"
-	def __hash__(self):
-		return hash(self.i)
-	def __eq__(self, rhs):
-		return self.i == rhs.i
-
-print(Foo(42))
-
-
-"""
-def Barify(baseCls, *args, **kwargs):
-	class Bar(baseCls):
-		def __new__(cls, *args, **kwargs):
-			return super(Bar, cls).__new__(cls)
-		def __init__(self, *args, **kwargs):
-			super().__init__(*args, **kwargs)
-	return Bar
-
-@Barify
-class Foo:
-	def __init__(self, i):
-		self.i = i
-	def __repr__(self):
-		return f"{type(self).__name__}(i = {self.i})"
-
-print(Foo(42))
-"""
-"""
-import threading, weakref
+from typing import ClassVar, List, Union
+from weakref import ref, ReferenceType
+import threading
 
 def InternCls(baseCls, *args, **kwargs):
-	class InternObj(object):
-		def __init__(self, obj):
-			self.objID = id(obj)
-			self.wkRef = weakref.ref(obj)
-	class Subcls(baseCls):
-		__gInternDict = {}
-		__gInternDictLock = threading.Lock()
+	class Interned(baseCls):
+		__DictVal = Union[ReferenceType,List[ReferenceType]]
+		__gDict: ClassVar[Dict[int,__DictVal]] = {}
+		__gLock: ClassVar = threading.Lock()
 		def __new__(cls, *args, **kwargs):
-			obj = super(Subcls, cls).__new__(cls)
-			hsh = hash(obj)
-			with cls.__gInternDictLock:
-				try:
-					entry = cls.__gInternDict[hsh]
-				except KeyError:
-					print("interning", obj)
-					cls.__gInternDict[hsh] = InternObj(obj)
-				else:
-					if entry.__class__ is list:
-						for subentry in entry:
-							if obj == subentry.wkRef():
-								obj = subentry.wkRef()
-								print("returning interned", obj)
-								break
-						else:
-							entry.append(InternObj(obj))
-					elif obj == entry.wkRef():
-						obj = entry.wkRef()
-						print("returning interned", obj)
+			recurse = kwargs.pop("INTERN_RECURSE", True)
+			if recurse:
+				kwargs["INTERN_RECURSE"] = False
+				obj = cls(*args, **kwargs)
+				key = hash(obj)
+				with cls.__gLock:
+					try:
+						val = cls.__gDict[key]
+					except KeyError:
+						cls.__gDict[key] = ref(obj)
 					else:
-						cls.__gInternDict[hsh] = [entry, InternObj(obj)]
-						print("interning", obj)
+						if val.__class__ is list:
+							for r in val:
+								if obj == r():
+									return r()
+							else:
+								val.append(ref(obj))
+						elif obj == val():
+							return val()
+						else:
+							cls.__gDict[key] = [val, ref(obj)]
+			else:
+				obj = super().__new__(cls)
 			return obj
 		def __init__(self, *args, **kwargs):
-			super(Subcls, self).__init__(*args, **kwargs)
+			kwargs.pop("INTERN_RECURSE", None)
+			super().__init__(*args, **kwargs)
 		def __del__(self):
-			print("deleting", repr(self))
-			hsh = hash(self)
-			with self.__gInternDictLock:
+			with self.__gLock:
+				key = hash(self)
 				try:
-					entry = cls.__gInternDict[hsh]
-				except KeyError: pass
-				else:
-					if entry.__class__ is list:
-						for i, subentry in enumerate(entry):
-							if id(self) == subentry.objID:
-								del entry[i]
+					val = self.__gDict[key]
+					if val.__class__ is list:
+						for i, r in enumerate(val):
+							if self == r():
+								del val[i]
 								break
-					elif id(self) == entry.objID:
-						del self.__gInternDict[hsh]
-	return Subcls
-
-@InternCls
-class Foo:
-	def __init__(self, i):
-		self.i = i
-	def __repr__(self):
-		return f"Foo(i = {self.i})"
-	def __hash__(self):
-		return hash(self.i)
-	def __eq__(self, rhs):
-		return self.i == rhs.i
-
-foo1 = Foo(42)
-#foo2 = Foo(42)
-#foo3 = Foo(42)
-print("foo1.i:", foo1.i)
-"""
+					elif self == val():
+						del self.__gDict[key]
+				except KeyError: pass
+	return Interned
