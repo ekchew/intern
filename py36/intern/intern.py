@@ -56,6 +56,56 @@ class _details:
 							break
 
 def Intern(baseCls, *args, **kwargs):
+	"""
+	Intern is a class decorator. If you have an immutable class, you can
+	decorate it to prevent multiple allocations with the same data.
+
+	Example:
+
+		>>> @Intern
+		... class Color:
+		...     def __init__(self, r, g, b):
+		...         self.r = r
+		...         self.g = g
+		...         self.b = b
+		...     def __hash__(self):
+		...         return hash((self.r, self.g, self.b))
+		...     def __eq__(self, rhs):
+		...         return (self.r, self.g, self.b) == (rhs.r, rhs.g, rhs.b)
+	    ...
+		>>> color1 = Color(1.0, 0.0, 0.0)
+		>>> color2 = Color(1.0, 0.0, 0.0)
+		>>> color2 is color1
+		True
+
+	Without the @Intern, color1 and color2 would be different objects. While
+	color2 == color1 would be True in either case, color2 is color1 would be
+	False. Only with interning would you get the same object back twice.
+
+	Implementation Notes:
+		- Objects get interned into an internal thread-safe global dict, and as
+		  such, need to be both hashable and equality-comparable.
+		- When you allocate the Color object above, what is returned as
+		  color1/color2 is technically a subclass of Color. The subclass
+		  supplies custom operators like __new__() and __del__() that take care
+		  of the interning.
+		- There is a hidden key word argument called INTERN_RECURSE that is
+		  passed through the __init__() method of the subclass for internal
+		  purposes. Do not use this name as one of your own class's args -- not
+		  that you are likely to.
+		- The internable.Internable class offers an alternate approach in which
+		  a base class handles the interning instead. This may be advantageous
+		  under certain circumstances.
+
+	WARNING:
+		Do not, under any circumstances, modify the attributes within an
+		interned class (at least not the ones that get hashed/compared)! This
+		will destabilize the interning algorithm. You could use properties to
+		permit read-only access with something along the lines:
+
+			@property
+			def r(self): return self.__r
+	"""
 
 	class Interned(baseCls):
 		__gLock: ClassVar = threading.Lock()
