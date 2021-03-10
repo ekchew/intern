@@ -8,7 +8,9 @@ identical, immutable objects.
 * Python 3.6 or later
 * C++17 or later
 
-There are no external dependencies beyond the standard library in either case.
+To be clear, there are no code dependencies between the Python and C++. They are self-contained implementations for each language, so you can pick whichever one you want and discard the other.
+
+There are also no external dependencies beyond the standard library in either case.
 
 ## Overview
 
