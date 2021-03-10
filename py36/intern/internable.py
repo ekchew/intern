@@ -10,6 +10,8 @@ class Internable:
 	MakeInterned() class method to instantiate them.
 	"""
 
+	class Immutable(Exception): pass
+
 	__gLock: ClassVar = threading.Lock()
 	__gDict: ClassVar[_details.Dct] = {}
 
@@ -52,6 +54,15 @@ class Internable:
 						if objID == info.objID:
 							return True
 		return False
+	def assertMutable(self):
+		"""
+		It is a good idea to call this from any setter methods.
+
+		Raises:
+			Internable.Immutable if current object is interned
+		"""
+		if self.isInterned:
+			raise self.Immutable("interned objects cannot be modified")
 	def __del__(self):
 		"""
 		This custom __del__() method unregisters any interned object from the
