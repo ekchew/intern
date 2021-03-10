@@ -38,15 +38,15 @@ implies immutability.
 
 A few implementation notes:
 
-* Python's internal look-up table is a dict. C++'s is a std::unordered_map. In
-either case, your class may need to be both hashable and equality-comparable.
+* Python's internal look-up table is a `dict`. C++'s is a `std::unordered_map`.
+In either case, your class may need to be both hashable and equality-comparable.
 The alternative is to have it export a tuple representation of the object data
 that can be both hashed and compared. More on that later.
 * In both the Python and C++ implementations, the look-up table is guarded by a
 mutex to keep it thread-safe.
 * Once the final reference to an object expires, the object is removed from the
-look-up table. (In C++, this occurs immediately. In Python, it is subject to the
-garbage collection logic.) This implies that an identical object may, in some
+look-up table. (In C++, this occurs immediately. In Python, it is triggered by
+garbage collection.) This implies that an identical object may, in some
 circumstances, need to be allocated a second time if the previous reference(s)
 were allowed to expire.
 
@@ -55,9 +55,9 @@ were allowed to expire.
 The Python implementation includes two modules: **intern.py** and
 **internable.py**. They take different approaches to interning objects.
 
-In intern.py is a class decorator called Intern. Applying this decorator to your
-class causes instances to get interned as you normally go about instantiating
-them.
+In intern.py is a class decorator called `Intern`. Applying this decorator to
+your class causes instances to get interned as you normally go about
+instantiating them.
 
 ### Example: @Intern decorator
 
