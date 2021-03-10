@@ -1,4 +1,4 @@
-from typing import Any, ClassVar, Dict, List, Union
+from typing import Any, ClassVar, Dict, List, Optional, Tuple, Union
 from weakref import ref, ReferenceType
 import threading
 
@@ -18,19 +18,20 @@ class _details:
 	@classmethod
 	def RegisterObj(cls, lock, dct: Dct, obj: Any) -> Any:
 		retObj = obj
-		key = hash(obj)
+		tup = cls.AsTuple(obj)
+		key = cls.HashObj(obj, tup)
 		with lock:
 			try: val = dct[key]
 			except KeyError: dct[key] = cls.Info(obj)
 			else:
 				if val.__class__ is cls.Info:
-					if obj == val.wkRef():
+					if cls.EqualObjs(obj, tup, val.wkRef()):
 						retObj = val.wkRef()
 					else:
 						dct[key] = [val, cls.Info(obj)]
 				else:
 					for info in val:
-						if obj == info.wkRef():
+						if cls.EqualObjs(obj, tup, info.wkRef()):
 							retObj = info.wkRef()
 							break
 					else:
@@ -38,7 +39,8 @@ class _details:
 		return retObj
 	@classmethod
 	def UnregisterObj(cls, lock, dct: Dct, obj: Any):
-		key = hash(obj)
+		tup = cls.AsTuple(obj)
+		key = cls.HashObj(obj, tup)
 		with lock:
 			try: val = dct[key]
 			except KeyError: pass
@@ -54,57 +56,22 @@ class _details:
 							if len(val) == 1:
 								dct[key] = val[0]
 							break
+	@staticmethod
+	def AsTuple(obj: Any) -> Optional[Tuple]:
+		try: return obj.asTuple()
+		except AttributeError: return None
+	@staticmethod
+	def HashObj(obj: Any, tup: Optional[Tuple]) -> int:
+		return hash(tup) if tup else hash(obj)
+	@staticmethod
+	def EqualObjs(obj1: Any, tup1: Optional[Tuple], obj2: Any) -> bool:
+		try: return tup1 == obj2.asTuple() if tup1 else obj1 == obj2
+		except AttributeError: return False
 
 def Intern(baseCls, *args, **kwargs):
 	"""
 	Intern is a class decorator. If you have an immutable class, you can
 	decorate it to prevent multiple allocations with the same data.
-
-	Example:
-
-		>>> @Intern
-		... class Color:
-		...     def __init__(self, r, g, b):
-		...         self.r = r
-		...         self.g = g
-		...         self.b = b
-		...     def __hash__(self):
-		...         return hash((self.r, self.g, self.b))
-		...     def __eq__(self, rhs):
-		...         return (self.r, self.g, self.b) == (rhs.r, rhs.g, rhs.b)
-	    ...
-		>>> color1 = Color(1.0, 0.0, 0.0)
-		>>> color2 = Color(1.0, 0.0, 0.0)
-		>>> color2 is color1
-		True
-
-	Without the @Intern, color1 and color2 would be different objects. While
-	color2 == color1 would be True in either case, color2 is color1 would be
-	False. Only with interning would you get the same object back twice.
-
-	Implementation Notes:
-		- Objects get interned into an internal thread-safe global dict, and as
-		  such, need to be both hashable and equality-comparable.
-		- When you allocate the Color object above, what is returned as
-		  color1/color2 is technically a subclass of Color. The subclass
-		  supplies custom operators like __new__() and __del__() that take care
-		  of the interning.
-		- There is a hidden key word argument called INTERN_RECURSE that is
-		  passed through the __init__() method of the subclass for internal
-		  purposes. Do not use this name as one of your own class's args -- not
-		  that you are likely to.
-		- The internable.Internable class offers an alternate approach in which
-		  a base class handles the interning instead. This may be advantageous
-		  under certain circumstances.
-
-	WARNING:
-		Do not, under any circumstances, modify the attributes within an
-		interned class (at least not the ones that get hashed/compared)! This
-		will destabilize the interning algorithm. You could use properties to
-		permit read-only access with something along the lines:
-
-			@property
-			def r(self): return self.__r
 	"""
 
 	class Interned(baseCls):

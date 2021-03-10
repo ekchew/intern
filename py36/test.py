@@ -5,10 +5,8 @@ from intern.internable import Internable
 class Foo:
 	def __init__(self, x):
 		self.x = x
-	def __hash__(self):
-		return hash(self.x)
-	def __eq__(self, rhs):
-		return self.x == rhs.x
+	def asTuple(self):
+		return (self.x,)
 
 foo1 = Foo(42)
 foo2 = Foo(42)
@@ -17,10 +15,8 @@ print(foo1 is foo2)
 class Bar(Internable):
 	def __init__(self, x):
 		self.x = x
-	def __hash__(self):
-		return hash(self.x)
-	def __eq__(self, rhs):
-		return self.x == rhs.x
+	def asTuple(self):
+		return (self.x,)
 
 bar1 = Bar.MakeInterned(42)
 bar2 = Bar.MakeInterned(42)
