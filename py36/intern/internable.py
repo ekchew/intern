@@ -40,14 +40,14 @@ class Internable:
 			True if the current object was allocated by MakeInterned().
 			False if it was instantiated directly.
 		"""
-		tup = _details.AsTuple(obj)
-		key = _details.HashObj(obj, tup)
+		tup = _details.AsTuple(self)
+		key = _details.HashObj(self, tup)
 		with self.__gLock:
 			try: val = self.__gDict[key]
 			except KeyError: pass
 			else:
 				objID = id(self)
-				if val.__class__ is cls.Info:
+				if val.__class__ is _details.Info:
 					return objID == val.objID
 				else:
 					for info in val:
@@ -61,7 +61,7 @@ class Internable:
 		Raises:
 			Internable.Immutable if current object is interned
 		"""
-		if self.isInterned:
+		if self.isInterned():
 			raise self.Immutable("interned objects cannot be modified")
 	def __del__(self):
 		"""
