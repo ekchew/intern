@@ -11,12 +11,8 @@ class _details:
 			self.objID = id(obj)
 			self.wkRef = ref(obj)
 
-	Key = int
-	Val = Union[Info, List[Info]]
-	Dct = Dict[Key, Val]
-
 	@classmethod
-	def RegisterObj(cls, lock, dct: Dct, obj: Any) -> Any:
+	def RegisterObj(cls, lock, dct: Dict, obj: Any) -> Any:
 		retObj = obj
 		tup = cls.AsTuple(obj)
 		key = cls.HashObj(obj, tup)
@@ -38,7 +34,7 @@ class _details:
 						val.append(cls.Info(obj))
 		return retObj
 	@classmethod
-	def UnregisterObj(cls, lock, dct: Dct, obj: Any):
+	def UnregisterObj(cls, lock, dct: Dict, obj: Any):
 		tup = cls.AsTuple(obj)
 		key = cls.HashObj(obj, tup)
 		with lock:
@@ -76,7 +72,7 @@ def Intern(baseCls, *args, **kwargs):
 
 	class Interned(baseCls):
 		__gLock: ClassVar = threading.Lock()
-		__gDict: ClassVar[_details.Dct] = {}
+		__gDict: ClassVar[Dict] = {}
 
 		def __new__(cls, *args, **kwargs):
 			recurse = kwargs.pop("INTERN_RECURSE", True)

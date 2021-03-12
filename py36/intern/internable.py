@@ -13,7 +13,7 @@ class Internable:
 	class Immutable(Exception): pass
 
 	__gLock: ClassVar = threading.Lock()
-	__gDict: ClassVar[_details.Dct] = {}
+	__gDict: ClassVar[Dict] = {}
 
 	@classmethod
 	def MakeInterned(cls, *args, **kwargs):
