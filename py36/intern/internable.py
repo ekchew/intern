@@ -33,6 +33,16 @@ class Internable:
 		"""
 		obj = cls(*args, **kwargs)
 		return _details.RegisterObj(cls.__gLock, cls.__gDict, obj)
+	@classmethod
+	def MakeInternable(cls, *args, **kwargs):
+		"""
+		Calls MakeInterned() if you include an intern=True key word argument in
+		the call. Otherwise, instantiates a non-interned cls object directly
+		using any other arguments you supply.
+		"""
+		intern = kwargs.pop("intern", False)
+		return cls.MakeInterned(*args, **kwargs) if intern \
+			else cls(*args, **kwargs)
 
 	def isInterned(self) -> bool:
 		"""
