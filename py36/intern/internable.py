@@ -36,11 +36,28 @@ class Internable:
 	@classmethod
 	def MakeInternable(cls, *args, **kwargs):
 		"""
-		Calls MakeInterned() if you include an intern=True key word argument in
-		the call. Otherwise, instantiates a non-interned cls object directly
-		using any other arguments you supply.
+		While MakeInterned() always interns the class object, MakeInternable()
+		gives you the option of interning it or not, depending on a key word
+		argument.
+
+		Args:
+			*args: positional args to pass to cls.__init__()
+			intern (bool, kwarg): intern new cls instance?
+				Defaults to False.
+			passOn (bool, kwarg): pass intern kwarg on to cls.__init__()
+				You might set this True if your class includes Internable
+				subobjects that you may want to intern as well? Defaults to
+				False.
+			*kwargs: remaining key word args get passed to cls.__init__()
+				The passOn arg is not itself passed on, but of course affects
+				whether or not the intern arg is.
+
+		Returns:
+			cls: an instance of your class which may or may not be interned
 		"""
-		intern = kwargs.pop("intern", False)
+		passOn = kwargs.pop("passOn", False)
+		intern = kwargs.get("intern", False) if passOn \
+			else kwargs.pop("intern", False)
 		return cls.MakeInterned(*args, **kwargs) if intern \
 			else cls(*args, **kwargs)
 
