@@ -61,6 +61,19 @@ class _details:
 		return hash(tup) if tup else hash(obj)
 	@staticmethod
 	def EqualObjs(obj1: Any, tup1: Optional[Tuple], obj2: Any) -> bool:
+		def sameElemTypes(tupA: Tuple, tupB: Tuple) -> bool:
+			#	After checking that 2 tuples are equal by value, this function
+			#	performs the additional check of making sure their elements are
+			#	also of the same type. The function is recursive, in order to
+			#	handle nested tuples within tuples.
+			for v1, v2 in zip(tupA, tupB):
+				if isinstance(v1, tuple):
+					if not sameElemTypes(v1, v2):
+						return False
+				elif type(v1) is not type(v2):
+					return False
+			return True
+
 		if tup1 is None:
 			return obj1 == obj2
 		else:
@@ -68,18 +81,7 @@ class _details:
 				tup2 = obj2.asTuple()
 			except AttributeError:
 				return False
-			if tup1 != tup2:
-				return False
-
-			#	This additional check was added because there are times when
-			#	2 tuples can be "equal" even though they have different element
-			#	types. For example, False == 0 evaluates True. This check should
-			#	prevent a (False, False) tuple from matching a (0, 0) tuple for
-			#	internment purposes.
-			for v1, v2 in zip(tup1, tup2):
-				if type(v1) is not type(v2):
-					return False
-			return True
+			return tup1 == tup2 and sameElemTypes(tup1, tup2)
 
 def Intern(baseCls, *args, **kwargs):
 	"""
