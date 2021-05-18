@@ -1,5 +1,5 @@
 from .intern import _details
-from typing import ClassVar, Dict
+from typing import ClassVar
 import threading
 
 class Internable:
@@ -13,7 +13,7 @@ class Internable:
 	class Immutable(Exception): pass
 
 	__gLock: ClassVar = threading.Lock()
-	__gDict: ClassVar[Dict] = {}
+	__gDict: ClassVar[dict] = {}
 
 	@classmethod
 	def MakeInterned(cls, *args, **kwargs):
