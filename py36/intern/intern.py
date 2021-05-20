@@ -1,87 +1,46 @@
-from typing import Any, ClassVar, Optional
+from collections.abc import ItemsView, Iterable
+from typing import Any, ClassVar, Generator, Optional, Union
 from weakref import ref, ReferenceType
-import threading
+from threading import Lock
 
 class _details:
-
-	class Info:
-		objID: int
-		wkRef: ReferenceType
-		def __init__(self, obj):
-			self.objID = id(obj)
-			self.wkRef = ref(obj)
-
 	@classmethod
-	def RegisterObj(cls, lock, dct: dict, obj: Any) -> Any:
-		retObj = obj
-		tup = cls.AsTuple(obj)
-		key = cls.HashObj(obj, tup)
-		with lock:
-			try: val = dct[key]
-			except KeyError: dct[key] = cls.Info(obj)
-			else:
-				if val.__class__ is cls.Info:
-					if cls.EqualObjs(obj, tup, val.wkRef()):
-						retObj = val.wkRef()
-					else:
-						dct[key] = [val, cls.Info(obj)]
-				else:
-					for info in val:
-						if cls.EqualObjs(obj, tup, info.wkRef()):
-							retObj = info.wkRef()
-							break
-					else:
-						val.append(cls.Info(obj))
-		return retObj
-	@classmethod
-	def UnregisterObj(cls, lock, dct: dict, obj: Any):
-		tup = cls.AsTuple(obj)
-		key = cls.HashObj(obj, tup)
-		with lock:
-			try: val = dct[key]
-			except KeyError: pass
-			else:
-				objID = id(obj)
-				if val.__class__ is cls.Info:
-					if objID == val.objID:
-						del dct[key]
-				else:
-					for i, info in enumerate(val):
-						if objID == info.objID:
-							del val[i]
-							if len(val) == 1:
-								dct[key] = val[0]
-							break
-	@staticmethod
-	def AsTuple(obj: Any) -> Optional[tuple]:
-		try: return obj.asTuple()
-		except AttributeError: return None
-	@staticmethod
-	def HashObj(obj: Any, tup: Optional[tuple]) -> int:
-		return hash(tup) if tup else hash(obj)
-	@staticmethod
-	def EqualObjs(obj1: Any, tup1: Optional[tuple], obj2: Any) -> bool:
-		def sameElemTypes(tupA: tuple, tupB: tuple) -> bool:
-			#	After checking that 2 tuples are equal by value, this function
-			#	performs the additional check of making sure their elements are
-			#	also of the same type. The function is recursive, in order to
-			#	handle nested tuples within tuples.
-			for v1, v2 in zip(tupA, tupB):
-				if isinstance(v1, tuple):
-					if not sameElemTypes(v1, v2):
-						return False
-				elif type(v1) is not type(v2):
-					return False
-			return True
-
-		if tup1 is None:
-			return obj1 == obj2
-		else:
+	def KeyTuple(cls, obj: Any) -> tuple:
+		def genElems(seq: Union[ItemsView,Iterable],
+			typ: type) -> Generator[Any,None,None]:
+			for elem in seq:
+				yield cls.KeyTuple(elem)
+			yield typ
+		def makeTuple(seq: Union[ItemsView,Iterable], typ: type) -> tuple:
+			return tuple(genElems(seq, typ))
+		typ = type(obj)
+		try:
+			tup = obj.astuple()
+		except AttributeError:
+			if typ in (list, tuple):
+				return makeTuple(obj, typ)
+			if typ is dict:
+				return makeTuple(obj.items(), tup)
 			try:
-				tup2 = obj2.asTuple()
-			except AttributeError:
-				return False
-			return tup1 == tup2 and sameElemTypes(tup1, tup2)
+				return ref(obj), typ
+			except TypeError:
+				return obj, typ
+		else:
+			return makeTuple(tup, typ)
+	@classmethod
+	def RegisterObj(cls, lock: Lock, dct: dict, obj: Any) -> Any:
+		tup = cls.KeyTuple(obj)
+		with lock:
+			try:
+				return dct[tup]()
+			except KeyError:
+				dct[tup] = ref(obj)
+				return obj
+	@classmethod
+	def UnregisterObj(cls, lock: Lock, dct: dict, obj: Any):
+		tup = cls.KeyTuple(obj)
+		with lock:
+			dct.pop(tup, None)
 
 def Intern(baseCls, *args, **kwargs):
 	"""
@@ -90,7 +49,7 @@ def Intern(baseCls, *args, **kwargs):
 	"""
 
 	class Interned(baseCls):
-		__gLock: ClassVar = threading.Lock()
+		__gLock: ClassVar = Lock()
 		__gDict: ClassVar[dict] = {}
 
 		def __new__(cls, *args, **kwargs):

@@ -62,12 +62,12 @@ instantiating them.
 ### Example: @Intern decorator
 
 	>>> @Intern
-	... class Color
+	... class Color:
 	...     def __init__(self, r, g, b):
 	...         self.r = r
 	...         self.g = g
 	...         self.b = b
-	...     def asTuple(self):
+	...     def astuple(self):
 	...         return (self.r, self.g, self.b)
 	...
 	>>> color1 = Color(1.0, 0.0, 0.0)
@@ -79,7 +79,7 @@ Without the `@Intern` decorator, `color2 is color1` would report `False`. Both
 objects may store the same red color, but they would not be the same object.
 They would be two separately allocated objects.
 
-`asTuple` is a special method the interning logic looks for. If present, the
+`astuple` is a special method the interning logic looks for. If present, the
 returned `tuple` representation of your object data is used internally for
 hashing and comparison purposes. In you do not provide this method in your
 class, you must provide the `__hash__` and `__eq__` operators instead.
@@ -97,12 +97,12 @@ of your class. To intern them, call the `MakeInterned` class method defined in
 
 ### Example: Internable base class
 
-	>>> class Color(Internable)
+	>>> class Color(Internable):
 	...     def __init__(self, r, g, b):
 	...         self.r = r
 	...         self.g = g
 	...         self.b = b
-	...     def asTuple(self):
+	...     def astuple(self):
 	...         return (self.r, self.g, self.b)
 	...
 	>>> color1 = Color.MakeInterned(1.0, 0.0, 0.0)
@@ -152,7 +152,7 @@ Output:
 	color1 is color2: true
 
 Of particular note here is this business with `Array`. It is essentially the C++
-counterpart to the Python implementation's `asTuple` method. The 2nd template
+counterpart to the Python implementation's `astuple` method. The 2nd template
 argument of `MakeInterned` is optional, but if you provide it, it tells
 `MakeInterned` that it can cast your class to that type.
 

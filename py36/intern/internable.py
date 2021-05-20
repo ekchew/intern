@@ -1,6 +1,6 @@
 from .intern import _details
-from typing import ClassVar
-import threading
+from typing import ClassVar, Union
+from threading import Lock
 
 class Internable:
 	"""
@@ -12,7 +12,7 @@ class Internable:
 
 	class Immutable(Exception): pass
 
-	__gLock: ClassVar = threading.Lock()
+	__gLock: ClassVar[Lock] = Lock()
 	__gDict: ClassVar[dict] = {}
 
 	@classmethod
@@ -67,20 +67,9 @@ class Internable:
 			True if the current object was allocated by MakeInterned().
 			False if it was instantiated directly.
 		"""
-		tup = _details.AsTuple(self)
-		key = _details.HashObj(self, tup)
+		tup = _details.KeyTuple(self)
 		with self.__gLock:
-			try: val = self.__gDict[key]
-			except KeyError: pass
-			else:
-				objID = id(self)
-				if val.__class__ is _details.Info:
-					return objID == val.objID
-				else:
-					for info in val:
-						if objID == info.objID:
-							return True
-		return False
+			return tup in self.__gDict
 	def assertMutable(self):
 		"""
 		It is a good idea to call this from any setter methods.
@@ -96,3 +85,4 @@ class Internable:
 		internal dict global once the last reference to it expires.
 		"""
 		_details.UnregisterObj(self.__gLock, self.__gDict, self)
+
